@@ -1,0 +1,3 @@
+rm -f log* dump* screen* file* *txt;
+#cp ~/lammps-22Aug18/src/lmp_owens .
+mpirun -np  2 ~/bin/lmp_owens  -partition 2x1 -in in.gibbs_PtAu_fcc

@@ -1,0 +1,11 @@
+rm -f log* dump* screen* *chempot*txt;
+#cp ~/lammps-22Aug18/src/lmp_owens .
+
+#mpirun -np 1 ~/bin/lmp_owens -in in.create_fcc
+#mpirun -np 1 ~/bin/lmp_owens -in in.create_bcc
+#mpirun -np 1 ~/bin/lmp_owens -in in.create_hex
+#mpirun -np 1 ~/bin/lmp_owens -in in.create_hex_Ti
+
+mpirun -np 4 ~/bin/lmp_owens  -partition 4x1 -in in.read_worlds_gibbs
+#mpirun -np 8 ./lmp_owens  -partition 4x2 -in in.read_worlds_gibbs
+

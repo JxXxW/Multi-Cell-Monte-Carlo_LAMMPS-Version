@@ -1,0 +1,52 @@
+# Create fcc phase 
+
+variable       POTENTIAL_PATH string /users/PAA0028/osu10666/lammps-22Aug18/tests/POTENTIALS/
+variable       AWK_PATH string /users/PAA0028/osu10666/Codes/AWK/
+
+variable        tt equal 500      # target temperature 
+variable        pp equal 0.0      # target pressure 
+variable        nlat equal 3        # supercell size
+variable        natoms equal count(all)
+variable        rep world 0 1 
+variable        wtype equal ${rep}+1
+
+units           metal
+atom_style      atomic
+pair_style      eam/alloy
+
+boundary        p p p
+
+variable        lat equal 3.65 # pure Ni
+variable        xx equal ${nlat}*${lat}
+variable        yy equal ${nlat}*${lat}
+variable        zz equal ${nlat}*${lat}
+
+region          box1   block 0 ${xx} 0 ${yy} 0 ${zz}
+
+lattice         fcc ${lat} origin 0.25 0.25 0.25 
+create_box      2  box1         
+create_atoms    ${wtype}  box
+
+
+pair_style eam/alloy
+pair_coeff * * ${POTENTIAL_PATH}/PtAu.eam.alloy Pt Au
+
+
+variable        t2t     equal 2.0*${tt}
+velocity        all create ${t2t} 87287 mom yes rot yes dist gaussian
+
+thermo_style    custom step temp epair emol etotal press density
+#thermo_modify norm yes
+thermo          5
+
+fix             1 all npt temp ${tt} ${tt} 1.0 iso ${pp} ${pp} 2.0 
+fix 		2 all ave/time 2 2000 5000 c_thermo_pe c_thermo_temp file temp.${rep}
+
+run		20000
+write_data      data.${rep}
+
+#shell  tail -1 temp.${rep} | awk -f ${AWK_PATH}/get_variables.awk -v n=${natoms} >  mu.${rep}
+
+
+
+

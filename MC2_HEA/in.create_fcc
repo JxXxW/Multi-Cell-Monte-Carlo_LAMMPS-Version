@@ -1,0 +1,34 @@
+# Create fcc phase 
+variable        nlat equal 3#5        # supercell size
+variable        natoms equal 4*${nlat}^3 # 4 FCC atoms per unit cell
+
+units           metal
+atom_style      atomic
+pair_style      eam/alloy
+
+boundary        p p p
+
+#variable        lat equal 3.65
+variable        lat equal 3.52 # pure Ni
+variable        xx equal ${nlat}*${lat}
+variable        yy equal ${nlat}*${lat}
+variable        zz equal ${nlat}*${lat}
+
+region          box1   block 0 ${xx} 0 ${yy} 0 ${zz}
+
+lattice         fcc ${lat} origin 0.25 0.25 0.25 
+create_box      4  box1         
+create_atoms    1  box
+
+#set		   atom * type 1
+#set             type 1 type/fraction 2 0.30 22
+#set             type 1 type/fraction 3 0.23857 24
+#set             type 1 type/fraction 4 0.313125 26
+
+pair_style      eam/alloy
+pair_coeff      * *   NiCoFeTi.eam.alloy Ni Co Fe Ti
+
+write_data      data.0
+dump            1 all custom 1 dump.0 id type x y z
+run		 0
+

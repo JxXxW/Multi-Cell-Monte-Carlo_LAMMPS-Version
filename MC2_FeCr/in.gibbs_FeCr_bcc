@@ -1,0 +1,86 @@
+variable       POTENTIAL_PATH string /users/PAA0028/osu10666/lammps-22Aug18/tests/POTENTIALS/
+
+variable        tt equal 900.0      # target temperature 
+variable        pp equal 0.0      # target pressure 
+variable        chempot equal 0     # unused gcmc argument
+variable        nlat equal 2       # supercell size
+
+variable        dmove equal 0.10         # size of max MC displacement
+variable        vmove equal 0.05         # size of max MC volume change
+
+units           metal
+atom_style      atomic
+pair_style      eam/alloy
+
+#atom_modify     map array
+#atom_modify     sort 0 0.0
+
+boundary        p p p
+
+variable        lat equal 2.90  
+variable        xx equal ${nlat}*${lat}
+variable        yy equal ${nlat}*${lat}
+variable        zz equal ${nlat}*${lat}
+
+region          box1   block 0 ${xx} 0 ${yy} 0 ${zz}
+lattice         bcc ${lat} origin 0.25 0.25 0.25 
+create_box      2  box1         
+create_atoms    1  box
+
+set             type 1 type/fraction 2 0.70 12345
+
+pair_style hybrid/overlay eam/alloy eam/fs
+pair_coeff * * eam/alloy FeCr_d.eam.alloy Fe Cr
+pair_coeff * * eam/fs FeCr_s.eam.fs Fe Cr
+
+
+variable        temper_T world ${tt} ${tt}
+variable 	rep world 0 1 
+variable        each equal 100
+variable	dach equal v_each*500
+variable        ncycles equal 750*${nlat}
+
+# atom counts
+
+
+variable        Fe atom "type==1"
+variable        Cr atom "type==2"
+
+group           Fe dynamic all var Fe
+group           Cr dynamic all var Cr
+
+variable        cFe equal count(Fe)
+variable        cCr equal count(Cr)
+
+
+variable        tt     equal 1.0*${temper_T}
+velocity        all create ${tt} 87287 mom yes rot yes dist gaussian
+
+
+
+fix             myfix all npt temp ${temper_T} ${temper_T} 1.0 iso ${pp} ${pp} 1.0
+run		5000
+unfix		myfix 
+
+thermo_style    custom step temp epair vol etotal press density v_cFe v_cCr
+thermo          ${each}
+
+
+reset_timestep 0    ### reset to get counter on swaps correct
+
+
+
+fix             myfix all npt temp ${temper_T} ${temper_T} 1.0 aniso ${pp} ${pp} 2.0 tchain 5 pchain 5
+#fix             myfix all nvt temp ${temper_T} ${temper_T} 2.0 tchain 5
+#fix             myfix1 all langevin ${tt} ${tt} 2.0 699483
+#fix             myfix2 all mc/box ${each} ${tt} 12345 iso ${pp} ${pp} ${vmove} lnV yes units box
+
+
+dump            1 all custom ${dach} dump.${rep} id type x y z
+
+## do averaging in thermo
+
+## mu_Fe = -3.96 at 600 K
+## mu_Cr = -3.95 at 600 K
+
+gibbs/multireplica 10000000  ${each}  ${ncycles} ${temper_T} myfix 123 888 types 1 2 fudge 0.50

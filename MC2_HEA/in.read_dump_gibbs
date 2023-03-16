@@ -1,0 +1,83 @@
+variable        tt equal 500.0      # target temperature 
+variable        pp equal 0.0      # target pressure 
+
+variable        temper_T world ${tt} ${tt} ${tt} ${tt}
+variable 	rep world 0 1 2 3  
+variable        each equal 50
+variable        ncycles equal 3500
+variable        dach equal v_each*10
+variable        vmove equal 0.05         # size of max MC volume change
+
+units           metal
+atom_style      atomic
+pair_style      eam/alloy
+
+boundary        p p p
+
+variable        nlat equal 2#
+
+variable        lat equal 2.92  
+variable        xx equal ${nlat}*${lat}
+variable        yy equal ${nlat}*${lat}
+variable        zz equal ${nlat}*${lat}
+
+region          box1   block 0 ${xx} 0 ${yy} 0 ${zz}
+lattice         bcc ${lat} origin 0.25 0.25 0.25 
+create_box      4  box1         
+
+read_dump       /users/PAA0028/osu10666/July9_AnisoQuatr_800.0_1.0_ccc/dump.1 1656000 x y z  add yes
+
+
+pair_style      eam/alloy
+pair_coeff      * *   NiCoFeTi.eam.alloy Ni Co Fe Ti
+
+
+variable        Ni atom "type==1"
+variable        Co atom "type==2"
+variable        Fe atom "type==3"
+variable        Ti atom "type==4"
+
+group           Ni dynamic all var Ni
+group           Co dynamic all var Co
+group           Ti dynamic all var Ti
+group           Fe dynamic all var Fe
+
+variable        cNi equal count(Ni)
+variable        cCo equal count(Co)
+variable        cTi equal count(Ti)
+variable        cFe equal count(Fe)
+
+
+thermo_style    custom step temp epair vol etotal press density lx ly lz v_cNi v_cCo v_cFe v_cTi
+thermo          10
+
+#variable        tt     equal 2.0*${temper_T}
+#velocity        all create ${tt} 87287 mom yes rot yes dist gaussian
+
+#fix             myfix all npt temp ${temper_T} ${temper_T} 1.0 iso ${pp} ${pp} 1.0
+#run             5000
+#unfix           myfix 
+
+reset_timestep 0
+
+#fix             myfix all nve
+fix             myfix all npt temp ${temper_T} ${temper_T} 1.0 aniso ${pp} ${pp} 2.0 tchain 5 pchain 5
+#fix             myfix all nvt temp ${temper_T} ${temper_T} 1.0 tchain 5
+#fix             myfix1 all langevin ${tt} ${tt} 2.0 699483
+#fix             myfix2 all mc/box ${each} ${tt} 12345 aniso ${pp} ${pp} ${vmove} lnV yes units box
+#fix             myfix all nvt temp ${temper_T} ${temper_T} 1.0 
+#fix             myfix all gcmc ${nd} 0 ${natoms} 1 12345 ${tt} ${chempot} ${dmove}
+#fix             myfix2 all mc/box ${each} ${tt} 12345 iso ${pp} ${pp} 0.1 lnV yes units box
+#run		2500
+
+#compute         str   all stress/atom NULL virial
+#variable       hydro   atom "(c_str[1]+c_str[2]+c_str[3])/(-3.0)"
+
+dump            1 all custom 1000 dump.${rep} id type x y z 
+
+gibbs/multireplica 10000000  ${each}  ${ncycles} ${temper_T} myfix 888 123 types 1 2 fudge 0.50 
+
+#gibbs/swaps     10000  ${each}  ${ncycles} ${temper_T} myfix 888 123 types 1 1 fudge 1.0
+#gibbs/worlds	 1000000 ${each}  ${ncycles} ${temper_T} myfix 888 123 types 1 1 fudge 1.0
+
+#write_data      data.min.${rep}

@@ -1,0 +1,4 @@
+rm -f log* dump* screen* file* *txt;
+cp ~/lammps-22Aug18/src/lmp_owens .
+#mpirun -np 2 ./lmp_owens  -partition 2x1 -in in.create_bcc
+mpirun -np 2 ./lmp_owens  -partition 2x1 -in in.gibbs_FeCr_bcc

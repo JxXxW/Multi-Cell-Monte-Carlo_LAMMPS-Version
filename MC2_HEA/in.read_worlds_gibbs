@@ -1,0 +1,56 @@
+variable        tt equal 400.0      # target temperature 
+variable        pp equal 0.0      # target pressure 
+
+variable        temper_T world ${tt} ${tt} ${tt} ${tt}
+variable 	rep world 0 1 2 3  
+variable        each equal 100
+variable        ncycles equal 3500
+variable        dach equal v_each*10
+variable        vmove equal 0.05         # size of max MC volume change
+
+units           metal
+atom_style      atomic
+pair_style      eam/alloy
+
+boundary        p p p
+read_data       data.${rep}
+
+pair_style      eam/alloy
+pair_coeff      * *   NiCoFeTi.eam.alloy Ni Co Fe Ti
+
+
+variable        Ni atom "type==1"
+variable        Co atom "type==2"
+variable        Fe atom "type==3"
+variable        Ti atom "type==4"
+
+group           Ni dynamic all var Ni
+group           Co dynamic all var Co
+group           Ti dynamic all var Ti
+group           Fe dynamic all var Fe
+
+variable        cNi equal count(Ni)
+variable        cCo equal count(Co)
+variable        cTi equal count(Ti)
+variable        cFe equal count(Fe)
+
+variable        tt     equal 2.0*${temper_T}
+velocity        all create ${tt} 87287 mom yes rot yes dist gaussian
+
+fix             myfix all npt temp ${temper_T} ${temper_T} 1.0 aniso ${pp} ${pp} 2.0 tchain 5 pchain 5
+run		5000
+unfix		myfix
+
+thermo_style    custom step temp epair vol etotal press density lx ly lz v_cNi v_cCo v_cFe v_cTi
+thermo          10
+
+fix             myfix all npt temp ${temper_T} ${temper_T} 1.0 aniso ${pp} ${pp} 2.0 tchain 5 pchain 5
+#fix             myfix all nve
+fix             myfix all npt temp ${temper_T} ${temper_T} 1.0 aniso ${pp} ${pp} 2.0 tchain 5 pchain 5
+#fix             myfix all nvt temp ${temper_T} ${temper_T} 1.0 tchain 5
+
+dump            1 all custom 1000 dump.${rep} id type x y z 
+gibbs/multireplica 100000000  ${each}  ${ncycles} ${temper_T} myfix 888 123 types 1 2 fudge 0.0
+
+
+#write_data      data.min.${rep}
